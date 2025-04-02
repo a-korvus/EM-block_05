@@ -12,6 +12,7 @@ from app.db.query import create_data
 from app.db.setup import run_pg_session
 from app.scraper.extracter import async_extract
 from app.scraper.scraper import download, fetch_links
+from app.utils.tools import scrap_event
 
 lgr = logging.getLogger(__name__)
 
@@ -45,18 +46,22 @@ async def main() -> None:
         ttl_dns_cache=300,
     )
 
-    async with ClientSession(
-        timeout=timeout,
-        connector=connector,
-        raise_for_status=True,
-        headers=headers,
-    ) as session:
-        await fetch_links(session, domain, start_url, links)
-        await download(session, links, dest_dir)
+    scrap_event.set()
+    try:
+        async with ClientSession(
+            timeout=timeout,
+            connector=connector,
+            raise_for_status=True,
+            headers=headers,
+        ) as session:
+            await fetch_links(session, domain, start_url, links)
+            await download(session, links, dest_dir)
 
-    data_to_db: list = await async_extract(dest_dir)
-    await run_pg_session(create_data, data_to_db)
-    shutil.rmtree(dest_dir)
+        data_to_db: list = await async_extract(dest_dir)
+        await run_pg_session(create_data, data_to_db)
+    finally:
+        shutil.rmtree(dest_dir)
+        scrap_event.clear()
 
     elapsed: float = time.perf_counter() - start
     lgr.info(f"The scraper worked in {elapsed:.4f} seconds.")

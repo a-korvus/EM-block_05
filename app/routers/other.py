@@ -9,6 +9,7 @@ from starlette import status
 
 from app.db.query import all_rows, run_check
 from app.scraper.main import main as scrap_main
+from app.utils.tools import scrap_event
 from app.utils.types import session_depends
 
 router = APIRouter()
@@ -35,7 +36,10 @@ async def check_db() -> dict:
 @router.get("/start-scrap/", tags=["scraper"])
 async def start_scrap(session: session_depends) -> Response:
     """
-    Run scrap data. If data already exists, text to user about it.
+    Run scrap data. If another scraper is working, text to user about it.
+    Only one scraper can work at a time.
+    If the target table does not exist, send the client a message
+    telling them to migrate.
 
     Args:
         session (session_depends): Async sqlalchemy session.
@@ -43,14 +47,19 @@ async def start_scrap(session: session_depends) -> Response:
     Returns:
         Response: Response from server.
     """
+    if scrap_event.is_set():
+        return ORJSONResponse({"message": "Another scraper is working now."})
+
     rows_in_table: int = await all_rows(session)
-
     if rows_in_table == -1:
-        content = {"message": "Migration needs to be done."}
-        status_code = status.HTTP_404_NOT_FOUND
-    else:
-        asyncio.create_task(scrap_main())
-        content = {"message": "The scraper is running."}
-        status_code = status.HTTP_201_CREATED
+        return ORJSONResponse(
+            content={"message": "Migration needs to be done."},
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
 
-    return ORJSONResponse(content, status_code)
+    asyncio.create_task(scrap_main())
+
+    return ORJSONResponse(
+        content={"message": "The scraper is running."},
+        status_code=status.HTTP_201_CREATED,
+    )
