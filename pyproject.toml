@@ -1,0 +1,35 @@
+[tool.mypy]
+exclude = ["venv/", ".venv/", "build/", "dist/"]
+namespace_packages = true
+explicit_package_bases = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+follow_imports = "normal"
+
+[tool.black]
+line-length = 79
+
+[tool.isort]
+profile = "black"
+line_length = 79
+
+[tool.flake8]
+exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".vscode",
+]
+max-line-length = 79
+max-complexity = 10
+docstring-convention = "google"
+select = [
+    "B",   # flake8-bugbear
+    "E",   # pycodestyle: Ошибки
+    "W",   # pycodestyle: Предупреждения
+    "F",   # pyflakes
+    "PIE"  # flake8-pie
+]
