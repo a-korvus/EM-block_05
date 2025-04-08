@@ -38,3 +38,16 @@ class Result(Base):
         server_default=text("timezone('utc', now())"),
         onupdate=func.now(),
     )
+
+    def __repr__(self) -> str:
+        """
+        Define the model instance string representation.
+
+        Returns:
+            str: Important instance data.
+        """
+        return (
+            f"<Result(id={self.id}, "
+            f"exchange_product_id='{self.exchange_product_id}', "
+            f"date='{self.date}')>"
+        )
