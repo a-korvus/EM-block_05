@@ -109,3 +109,4 @@ requirements_dev.txt
 req_handler.py
 lint.py
 pyproject.toml
+pytest.ini
