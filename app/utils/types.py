@@ -11,5 +11,5 @@ from app.utils.tools import now_utc
 session_depends = Annotated[AsyncSession, Depends(get_session)]
 default_days: int = Query(default=1, ge=1)
 now_date_query = Annotated[
-    str, Query(default_factory=now_utc, example="2025-04-01")
+    str, Query(default_factory=now_utc, examples=["2025-04-01"])
 ]
