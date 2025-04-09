@@ -90,6 +90,13 @@ async def test_add_many(raw_db_session: AsyncSession) -> None:
     assert num_input_rows == len(all_results)
 
 
+# @pytest.mark.anyio
+# async def test_db_models(raw_db_session) -> None:
+#     result = await raw_db_session.execute(select(Result))
+#     print(f"{len(result.scalars().all())=}")
+#     assert True
+
+
 @pytest.mark.anyio
 async def test_single_commit(mocker: MockerFixture) -> None:
     """

@@ -61,6 +61,30 @@ def fake_result() -> dict[str, Any]:
     }
 
 
+def fake_result_output() -> dict[str, Any]:
+    """
+    Generate some fake output from db result of trades.
+
+    Returns:
+        dict[str, Any]: Random values of result fields.
+    """
+    return {
+        "id": random.randint(1, 9),
+        "exchange_product_id": get_str_given_len(11),
+        "exchange_product_name": get_str_given_len(255),
+        "oil_id": get_str_given_len(4),
+        "delivery_basis_id": get_str_given_len(3),
+        "delivery_basis_name": get_str_given_len(255),
+        "delivery_type_id": get_str_given_len(1),
+        "volume": random.randint(1, 21),
+        "total": random.randint(1, 21),
+        "count": random.randint(1, 21),
+        "date": datetime.now(),
+        "created_on": datetime.now(),
+        "updated_on": datetime.now(),
+    }
+
+
 def fake_result_many() -> list[list[dict[str, Any]]]:
     """
     Generate some fake result of trades.

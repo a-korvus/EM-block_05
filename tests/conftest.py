@@ -4,7 +4,7 @@ import logging
 from typing import AsyncGenerator
 
 import pytest
-from pytest import FixtureRequest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.main import app
 from tests.setup_db import (
     TEST_DB_URL,
     setup_db_before_tests,
@@ -30,7 +31,7 @@ def anyio_backend() -> str:
 
 
 @pytest.fixture(scope="session")
-async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
+async def db_engine_generator() -> AsyncGenerator[AsyncEngine, None]:
     """
     Manage the test database engine at the session level.
 
@@ -79,38 +80,59 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
             pass
 
 
+@pytest.fixture(scope="session")
+async def db_engine(
+    db_engine_generator: AsyncGenerator[AsyncEngine, None],
+) -> AsyncEngine:
+    """
+    Return the AsyncEngine object obtained from the async generator.
+
+    Args:
+        db_engine_generator (AsyncGenerator[AsyncEngine, None]):
+            AsyncEngine object from generator.
+
+    Returns:
+        AsyncEngine: Test AsyncEngine object.
+    """
+    lgr.debug(f"Get AsyncEngine object from generator: {db_engine_generator}")
+
+    if not isinstance(db_engine_generator, AsyncEngine):
+        lgr.error(f"'db_engine' get wrong type: {type(db_engine_generator)}")
+        pytest.fail(
+            "'db_engine' fixture expected AsyncEngine, "
+            f"got {type(db_engine_generator)}"
+        )
+    return db_engine_generator
+
+
 @pytest.fixture(scope="function", autouse=True)
 async def truncate_tables(
-    request: FixtureRequest,
+    db_engine: AsyncEngine,
 ) -> AsyncGenerator[None, None]:
     """
     Clear tables before each test.
 
     Explicitly gets the result of the db_engine fixture via request.
     """
-    lgr.debug("Start clearing tables (truncate) before test")
-    db_engine_instance: AsyncEngine | None = None
+    lgr.info("Start clearing tables (truncate) before test")
+    if not isinstance(db_engine, AsyncEngine):
+        lgr.error(
+            "WRONG type in 'truncate_tables': db_engine is "
+            f"'{type(db_engine)}'"
+        )
+        pytest.fail(
+            "Error in 'truncate_tables': was expected AsyncEngine, "
+            f"received '{type(db_engine)}'"
+        )
 
     try:
-        db_engine_instance = request.getfixturevalue("db_engine")
-
-        if not isinstance(db_engine_instance, AsyncEngine):
-            lgr.error(
-                "WRONG type in truncate_tables: db_engine is "
-                f"'{type(db_engine_instance)}'"
-            )
-            pytest.fail(
-                "Error in truncate_tables: was expected AsyncEngine, "
-                f"received '{type(db_engine_instance)}'"
-            )
-
-        async with db_engine_instance.begin() as conn:
-            lgr.debug(f"Run TRUNCATE on engine '{db_engine_instance}'")
+        async with db_engine.begin() as conn:
+            lgr.info(f"Run TRUNCATE on engine '{db_engine}'")
             await conn.execute(
                 text("TRUNCATE TABLE spimex_trading_results RESTART IDENTITY")
             )
             # тут можно добавить TRUNCATE для других таблиц, если необходимо
-        lgr.debug("Table truncation before test completed")
+        lgr.info("Table truncation before test completed")
 
         yield  # выполнение теста
 
@@ -138,6 +160,15 @@ async def db_session(
     Yields:
         AsyncGenerator[AsyncSession, None]: Main test session.
     """
+    if not isinstance(db_engine, AsyncEngine):
+        lgr.error(
+            f"WRONG type in 'db_session': db_engine is '{type(db_engine)}'"
+        )
+        pytest.fail(
+            "Error in 'db_session': was expected AsyncEngine, "
+            f"received '{type(db_engine)}'"
+        )
+
     async_session_maker = async_sessionmaker(
         bind=db_engine,
         expire_on_commit=False,
@@ -183,6 +214,21 @@ async def raw_db_session(
             yield session
         finally:
             lgr.debug(f"Raw session '{session}' closed")
+
+
+@pytest.fixture(scope="function")
+async def httpx_test_client() -> AsyncGenerator[AsyncClient, None]:
+    """
+    Provide a client for http requests.
+
+    Yields:
+        Iterator[AsyncGenerator[AsyncClient, None]]: Test httpx async client.
+    """
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        yield client
 
 
 configure_logging(level=logging.DEBUG)
