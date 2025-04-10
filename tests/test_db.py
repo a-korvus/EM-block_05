@@ -4,8 +4,6 @@ Some tests to check how DB related tools works.
 Using test database.
 """
 
-# from unittest.mock import AsyncMock, call
-
 import pytest
 from pytest_mock import MockerFixture
 from sqlalchemy import select
@@ -88,13 +86,6 @@ async def test_add_many(raw_db_session: AsyncSession) -> None:
     all_results = result.scalars().all()
 
     assert num_input_rows == len(all_results)
-
-
-# @pytest.mark.anyio
-# async def test_db_models(raw_db_session) -> None:
-#     result = await raw_db_session.execute(select(Result))
-#     print(f"{len(result.scalars().all())=}")
-#     assert True
 
 
 @pytest.mark.anyio

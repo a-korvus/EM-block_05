@@ -31,5 +31,33 @@ select = [
     "E",   # pycodestyle: Ошибки
     "W",   # pycodestyle: Предупреждения
     "F",   # pyflakes
-    "PIE"  # flake8-pie
+    "PIE", # flake8-pie
 ]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+pythonpath = [".", "app"]
+testpaths = ["tests"]
+norecursedirs = [".git", ".venv", "app"]
+
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*"]
+addopts = "-sv --maxfail=3"
+
+console_output_style = "progress"
+# log_cli = true
+# log_cli_level = "DEBUG"
+# log_cli_format = "%(asctime)s [%(levelname)s] %(message)s"
+# log_cli_date_format = "%Y-%m-%d_%H:%M:%S"
+
+markers = [
+    "slow: marks tests as slow (use '-m \"not slow\"' to skip)",
+    "network: tests requiring network access",
+]
+
+junit_family = "xunit2"
+junit_logging = "all"
+
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "session"
